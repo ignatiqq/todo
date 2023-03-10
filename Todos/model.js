@@ -1,3 +1,33 @@
+const switchMap = (innerObxReturningFunc) => (sourceObx) => {
+    let innerSubscription
+    return new rxjs.Observable(observer => {
+      const sourceSubscription = sourceObx.subscribe({
+        next(val) {
+          // unsubscribe from previous subscription if exists
+          innerSubscription && innerSubscription.unsubscribe()
+  
+          // subscribe to inner Observable
+          const innerObx = innerObxReturningFunc(val);
+          innerSubscription = innerObx._subscribe({    // <- start the inner Obx
+            next: (_val) => observer.next(_val),
+            error: (_err) => observer.error(_err),
+            complete: () => observer.complete(),
+          })
+        },
+        error() {
+          // doesn’t care about source Obx errors
+        },
+        complete() {
+          // doesn’t care about source Obx completion
+        }
+      })
+      return () => {
+        innerSubscription.unsubscribe()
+        sourceSubscription.unsubscribe()
+      }
+    })
+}
+
 export class Todo {
     constructor({id, title, description, isCompleted = false}) {
         this.id = id;
@@ -31,10 +61,10 @@ export class TodosModel {
     getTodos() {
         const data$ = rxjs.fetch.fromFetch(this.api)
             .pipe(
-                rxjs.switchMap(res => res.json()),
+                switchMap(res => new rxjs.Observable((observer) => res.json().then(observer.next))),
                 rxjs.map((data) => data.map((item) => this.adaptTodoData(item))),
                 rxjs.map((newTodos) => [...newTodos, ...this.todos])
-            );
+            )
         return data$;
     }
 

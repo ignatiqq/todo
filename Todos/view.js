@@ -61,10 +61,12 @@ export class TodoView {
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = 'delete';
         deleteBtn.id = this.controlIds.deleteBtn;
-        rxjs.fromEvent(deleteBtn, 'click').subscribe(() => {
-            this.deleteTodoCallback(id);
-            this.destroyTodo(id);
-        });
+        const click$ = rxjs.fromEvent(deleteBtn, 'click');
+        const deleteBtnClickSideEffects$ = click$.pipe(
+            rxjs.map(() => this.deleteTodoCallback(id)),
+            rxjs.map(() => this.destroyTodo(id))
+        )
+        deleteBtnClickSideEffects$.subscribe();
         return deleteBtn;
     }
 
